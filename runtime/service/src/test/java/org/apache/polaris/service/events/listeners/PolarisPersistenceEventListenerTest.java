@@ -161,6 +161,28 @@ class PolarisPersistenceEventListenerTest {
   }
 
   @Test
+  void shouldPersistEventWithNullAttributeValues() {
+    CapturingPersistenceListener listener = new CapturingPersistenceListener();
+
+    listener.onEvent(
+        new PolarisEvent(
+            PolarisEventType.BEFORE_LOAD_TABLE,
+            metadata(),
+            ImmutableAttributeMap.builder()
+                .put(EventAttributes.CATALOG_NAME, CATALOG_NAME)
+                .put(EventAttributes.NAMESPACE, NAMESPACE)
+                .put(EventAttributes.TABLE_NAME, TABLE_NAME)
+                .put(EventAttributes.IF_NONE_MATCH_STRING, null)
+                .put(EventAttributes.SNAPSHOTS, null)
+                .build()));
+
+    assertThat(additionalProperties(listener.persistedEvent(PolarisEventType.BEFORE_LOAD_TABLE)))
+        .containsEntry(EventAttributes.TABLE_NAME.key(), TABLE_NAME)
+        .doesNotContainKeys(
+            EventAttributes.IF_NONE_MATCH_STRING.key(), EventAttributes.SNAPSHOTS.key());
+  }
+
+  @Test
   void shouldRejectUnknownAttributesInGlobalDenylistConfiguration() {
     assertThatThrownBy(
             () -> DefaultEventSanitizer.resolveAdditionalDenylist(Set.of("NONEXISTENT_ATTRIBUTE")))

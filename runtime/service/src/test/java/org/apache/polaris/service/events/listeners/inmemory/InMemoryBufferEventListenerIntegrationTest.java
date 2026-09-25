@@ -185,6 +185,7 @@ class InMemoryBufferEventListenerIntegrationTest {
                         .containsAll(
                             Set.of(
                                 "AFTER_CREATE_CATALOG",
+                                "BEFORE_CREATE_TABLE",
                                 "AFTER_CREATE_TABLE",
                                 "AFTER_LIST_PRINCIPALS")));
 

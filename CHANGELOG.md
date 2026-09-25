@@ -150,6 +150,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- The `persistence-in-memory-buffer` event listener now persists events that have `null` attribute
+  values, such as `BEFORE_LOAD_TABLE` for a request that omits an optional parameter. Previously
+  these events failed with a `NullPointerException` and were not written to the `events` table.
 - Re-creating an existing namespace now returns `409 Conflict` instead of `403 Forbidden` when
   `OPTIMIZED_SIBLING_CHECK` is on. Namespace creation checks for an existing namespace before
   validating locations, as table and view creation already do, so the existing namespace's own
