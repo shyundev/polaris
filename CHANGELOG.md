@@ -110,6 +110,11 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- The `polaris.config.iceberg-commit-max-retries` and
+  `polaris.config.rollback.compaction.on-conflicts.enabled` catalog properties now take effect.
+  Both settings were read only once after startup, using the realm of the first request that
+  loaded them, so catalog properties were ignored and all realms used that realm's values. After
+  upgrading, catalogs and realms that already set these values start using them.
 - NoSQL commits resend unresolved object writes on retry, preventing successful commits from
   referencing objects left unwritten by a previous attempt.
 - The H2 relational JDBC init script no longer overwrites the recorded schema version. It now seeds

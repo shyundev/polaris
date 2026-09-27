@@ -51,9 +51,11 @@ import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DataFiles;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableMetadataParser;
+import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.TableProperties;
 import org.apache.iceberg.Transaction;
 import org.apache.iceberg.UpdatePartitionSpec;
@@ -2220,6 +2222,60 @@ public abstract class PolarisRestCatalogIntegrationBase extends CatalogTests<RES
     } finally {
       genericTableApi.purge(currentCatalogName, namespace);
     }
+  }
+
+  @CatalogConfig(properties = {"polaris.config.rollback.compaction.on-conflicts.enabled", "true"})
+  @Test
+  public void testRollbackCompactionOnConflictsEnabledByCatalogConfig() {
+    Namespace namespace = Namespace.of("ns1");
+    restCatalog.createNamespace(namespace);
+    try {
+      TableIdentifier tableIdentifier = TableIdentifier.of(namespace, "tbl1");
+      Snapshot appended = commitAppendBasedOnSnapshotBeforeCompaction(tableIdentifier);
+      assertThat(restCatalog.loadTable(tableIdentifier).currentSnapshot().snapshotId())
+          .isEqualTo(appended.snapshotId());
+    } finally {
+      catalogApi.purge(currentCatalogName, namespace);
+    }
+  }
+
+  @CatalogConfig(properties = {"polaris.config.rollback.compaction.on-conflicts.enabled", "false"})
+  @Test
+  public void testRollbackCompactionOnConflictsDisabledByCatalogConfig() {
+    Namespace namespace = Namespace.of("ns1");
+    restCatalog.createNamespace(namespace);
+    try {
+      TableIdentifier tableIdentifier = TableIdentifier.of(namespace, "tbl1");
+      assertThatThrownBy(() -> commitAppendBasedOnSnapshotBeforeCompaction(tableIdentifier))
+          .isInstanceOf(CommitFailedException.class)
+          .hasMessageContaining("Requirement failed: branch main has changed");
+    } finally {
+      catalogApi.purge(currentCatalogName, namespace);
+    }
+  }
+
+  private Snapshot commitAppendBasedOnSnapshotBeforeCompaction(TableIdentifier tableIdentifier) {
+    Table table = restCatalog.buildTable(tableIdentifier, SCHEMA).withPartitionSpec(SPEC).create();
+    table.newFastAppend().appendFile(FILE_A).commit();
+
+    // Prepare the append on the snapshot before compaction and commit it through TableOperations,
+    // so that the client does not refresh and retry it when the server rejects the commit.
+    Table writerTable = restCatalog.loadTable(tableIdentifier);
+    TableOperations writerOps = ((BaseTable) writerTable).operations();
+    TableMetadata writerBase = writerOps.current();
+    Snapshot writerSnapshot = writerTable.newFastAppend().appendFile(FILE_C).apply();
+
+    table
+        .newRewrite()
+        .deleteFile(FILE_A)
+        .addFile(FILE_B)
+        .set("polaris.internal.conflict-resolution.by-operation-type.replace", "rollback")
+        .commit();
+
+    writerOps.commit(
+        writerBase,
+        TableMetadata.buildFrom(writerBase).setBranchSnapshot(writerSnapshot, "main").build());
+    return writerSnapshot;
   }
 
   @Test

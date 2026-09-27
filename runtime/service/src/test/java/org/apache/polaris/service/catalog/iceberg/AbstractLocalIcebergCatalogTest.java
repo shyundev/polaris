@@ -624,8 +624,9 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
 
     try {
       // Now call IRC server to commit delete operation.
-      CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils(5, true);
-      catalogHandlerUtils.commit(((BaseTable) catalog.loadTable(TABLE)).operations(), request);
+      CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils();
+      catalogHandlerUtils.commit(
+          ((BaseTable) catalog.loadTable(TABLE)).operations(), request, 5, true);
     } catch (Exception e) {
       fail("Rollback Compaction on conflict feature failed : " + e);
     }
@@ -706,9 +707,9 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
         };
 
     UpdateTableRequest request = new UpdateTableRequest(List.of(), List.of(retryableUpdate));
-    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils(5, false);
+    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils();
 
-    assertThatThrownBy(() -> catalogHandlerUtils.commit(ops, request))
+    assertThatThrownBy(() -> catalogHandlerUtils.commit(ops, request, 5, false))
         .isInstanceOf(CommitFailedException.class)
         // RetryableValidationException must not leak: it is a ValidationException, which maps to
         // 400.
@@ -764,11 +765,11 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
 
     // commit FILE_C
     catalog.loadTable(TABLE).newFastAppend().appendFile(FILE_C).commit();
-    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils(5, true);
+    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils();
     Assertions.assertThatThrownBy(
             () ->
                 catalogHandlerUtils.commit(
-                    ((BaseTable) catalog.loadTable(TABLE)).operations(), request))
+                    ((BaseTable) catalog.loadTable(TABLE)).operations(), request, 5, true))
         .isInstanceOf(CommitFailedException.class)
         .hasMessageContaining("Requirement failed: branch main has changed");
 
@@ -839,11 +840,11 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
         .commit();
     // now add more files to non-main branch
     catalog.loadTable(TABLE).newFastAppend().appendFile(FILE_C).toBranch("non-main").commit();
-    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils(5, true);
+    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils();
     Assertions.assertThatThrownBy(
             () ->
                 catalogHandlerUtils.commit(
-                    ((BaseTable) catalog.loadTable(TABLE)).operations(), request))
+                    ((BaseTable) catalog.loadTable(TABLE)).operations(), request, 5, true))
         .isInstanceOf(CommitFailedException.class)
         .hasMessageContaining("Requirement failed: branch main has changed");
 
@@ -915,11 +916,11 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
     // now add more files to non-main branch, this will make sequence number non monotonic for main
     // branch
     catalog.loadTable(TABLE).newFastAppend().appendFile(FILE_C).toBranch("non-main").commit();
-    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils(5, true);
+    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils();
     Assertions.assertThatThrownBy(
             () ->
                 catalogHandlerUtils.commit(
-                    ((BaseTable) catalog.loadTable(TABLE)).operations(), request))
+                    ((BaseTable) catalog.loadTable(TABLE)).operations(), request, 5, true))
         .isInstanceOf(CommitFailedException.class)
         .hasMessageContaining("Requirement failed: branch main has changed");
 
@@ -967,8 +968,8 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
         .when(spyOps)
         .commit(any(), any());
 
-    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils(5, false);
-    TableMetadata result = catalogHandlerUtils.commit(spyOps, request);
+    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils();
+    TableMetadata result = catalogHandlerUtils.commit(spyOps, request, 5, false);
 
     Mockito.verify(spyOps, Mockito.atLeastOnce()).refresh();
     Assertions.assertThat(result.properties()).containsEntry("test-key", "test-value");

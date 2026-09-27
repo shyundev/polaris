@@ -18,6 +18,8 @@
  */
 package org.apache.polaris.service.catalog.iceberg;
 
+import static org.apache.polaris.core.config.FeatureConfiguration.ICEBERG_COMMIT_MAX_RETRIES;
+import static org.apache.polaris.core.config.FeatureConfiguration.ICEBERG_ROLLBACK_COMPACTION_ON_CONFLICTS;
 import static org.apache.polaris.core.config.FeatureConfiguration.LIST_PAGINATION_ENABLED;
 import static org.apache.polaris.core.config.FeatureConfiguration.LIST_PAGINATION_MAX_PAGE_SIZE;
 import static org.apache.polaris.service.catalog.AccessDelegationMode.REMOTE_SIGNING;
@@ -27,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -449,7 +452,11 @@ class IcebergCatalogHandlerTest {
             eq(FeatureConfiguration.ENABLE_FINE_GRAINED_UPDATE_TABLE_PRIVILEGES),
             eq(catalogEntity)))
         .thenReturn(true);
-    when(catalogHandlerUtils.updateTable(eq(catalog), eq(TABLE2), any(UpdateTableRequest.class)))
+    when(realmConfig.getConfig(ICEBERG_COMMIT_MAX_RETRIES, catalogEntity)).thenReturn(4);
+    when(realmConfig.getConfig(ICEBERG_ROLLBACK_COMPACTION_ON_CONFLICTS, catalogEntity))
+        .thenReturn(false);
+    when(catalogHandlerUtils.updateTable(
+            eq(catalog), eq(TABLE2), any(UpdateTableRequest.class), anyInt(), anyBoolean()))
         .thenReturn(mock(LoadTableResponse.class));
     @SuppressWarnings("unchecked")
     ArgumentCaptor<AuthorizationRequest> requestCaptor =
@@ -471,6 +478,29 @@ class IcebergCatalogHandlerTest {
     verify(authorizer).authorize(any(), authorizeRequestCaptor.capture());
     assertThat(authorizeRequestCaptor.getValue().intents().getFirst().operation())
         .isEqualTo(PolarisAuthorizableOperation.SET_TABLE_PROPERTIES);
+  }
+
+  @Test
+  void updateTableUsesCatalogCommitSettings() {
+    UpdateTableRequest request =
+        UpdateTableRequest.create(
+            TABLE2, List.of(), List.of(new MetadataUpdate.SetProperties(Map.of("k", "v"))));
+    Catalog catalog = mock(Catalog.class);
+    when(localCatalogFactory.createCatalog(any())).thenReturn(catalog);
+    when(realmConfig.getConfig(
+            FeatureConfiguration.ENABLE_FINE_GRAINED_UPDATE_TABLE_PRIVILEGES, catalogEntity))
+        .thenReturn(true);
+    when(realmConfig.getConfig(ICEBERG_COMMIT_MAX_RETRIES, catalogEntity)).thenReturn(7);
+    when(realmConfig.getConfig(ICEBERG_ROLLBACK_COMPACTION_ON_CONFLICTS, catalogEntity))
+        .thenReturn(true);
+
+    @SuppressWarnings("resource")
+    IcebergCatalogHandler handler = newHandler();
+
+    handler.updateTable(TABLE2, request);
+
+    verify(catalogHandlerUtils)
+        .updateTable(eq(catalog), eq(TABLE2), any(UpdateTableRequest.class), eq(7), eq(true));
   }
 
   /**

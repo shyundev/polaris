@@ -28,7 +28,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,8 +87,6 @@ import org.apache.iceberg.view.ViewBuilder;
 import org.apache.iceberg.view.ViewMetadata;
 import org.apache.iceberg.view.ViewOperations;
 import org.apache.iceberg.view.ViewRepresentation;
-import org.apache.polaris.core.config.FeatureConfiguration;
-import org.apache.polaris.core.config.RealmConfig;
 import org.apache.polaris.core.entity.PolarisEntitySubType;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -123,22 +120,6 @@ public class CatalogHandlerUtils {
     } catch (NoSuchFieldException e) {
       throw new RuntimeException("Unable to access field", e);
     }
-  }
-
-  private final int maxCommitRetries;
-  private final boolean rollbackCompactionEnabled;
-
-  @Inject
-  public CatalogHandlerUtils(RealmConfig realmConfig) {
-    this(
-        realmConfig.getConfig(FeatureConfiguration.ICEBERG_COMMIT_MAX_RETRIES),
-        realmConfig.getConfig(FeatureConfiguration.ICEBERG_ROLLBACK_COMPACTION_ON_CONFLICTS));
-  }
-
-  @VisibleForTesting
-  public CatalogHandlerUtils(int maxCommitRetries, boolean rollbackCompactionEnabled) {
-    this.maxCommitRetries = maxCommitRetries;
-    this.rollbackCompactionEnabled = rollbackCompactionEnabled;
   }
 
   /**
@@ -325,7 +306,11 @@ public class CatalogHandlerUtils {
   }
 
   public LoadTableResponse updateTable(
-      Catalog catalog, TableIdentifier ident, UpdateTableRequest request) {
+      Catalog catalog,
+      TableIdentifier ident,
+      UpdateTableRequest request,
+      int maxCommitRetries,
+      boolean rollbackCompactionEnabled) {
     TableMetadata finalMetadata;
     if (isCreate(request)) {
       // this is a hacky way to get TableOperations for an uncommitted table
@@ -342,7 +327,7 @@ public class CatalogHandlerUtils {
       Table table = catalog.loadTable(ident);
       if (table instanceof BaseTable baseTable) {
         TableOperations ops = baseTable.operations();
-        finalMetadata = commit(ops, request);
+        finalMetadata = commit(ops, request, maxCommitRetries, rollbackCompactionEnabled);
       } else {
         throw new IllegalStateException("Cannot wrap catalog that does not produce BaseTable");
       }
@@ -391,7 +376,11 @@ public class CatalogHandlerUtils {
   }
 
   @VisibleForTesting
-  public TableMetadata commit(TableOperations ops, UpdateTableRequest request) {
+  public TableMetadata commit(
+      TableOperations ops,
+      UpdateTableRequest request,
+      int maxCommitRetries,
+      boolean rollbackCompactionEnabled) {
     AtomicBoolean isRetry = new AtomicBoolean(false);
     try {
       Tasks.foreach(ops)
@@ -718,9 +707,12 @@ public class CatalogHandlerUtils {
   }
 
   public LoadViewResponse updateView(
-      ViewCatalog catalog, TableIdentifier ident, UpdateTableRequest request) {
+      ViewCatalog catalog,
+      TableIdentifier ident,
+      UpdateTableRequest request,
+      int maxCommitRetries) {
     View view = catalog.loadView(ident);
-    ViewMetadata metadata = commit(asBaseView(view).operations(), request);
+    ViewMetadata metadata = commit(asBaseView(view).operations(), request, maxCommitRetries);
 
     return ImmutableLoadViewResponse.builder()
         .metadata(metadata)
@@ -748,7 +740,8 @@ public class CatalogHandlerUtils {
     return viewResponse(view);
   }
 
-  protected ViewMetadata commit(ViewOperations ops, UpdateTableRequest request) {
+  protected ViewMetadata commit(
+      ViewOperations ops, UpdateTableRequest request, int maxCommitRetries) {
     AtomicBoolean isRetry = new AtomicBoolean(false);
     try {
       Tasks.foreach(ops)
