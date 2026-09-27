@@ -289,7 +289,7 @@ public class JWTBroker implements TokenBroker {
 
   @Override
   public boolean supportsGrantType(String grantType) {
-    return TokenRequestValidator.ALLOWED_GRANT_TYPES.contains(grantType);
+    return grantType != null && TokenRequestValidator.ALLOWED_GRANT_TYPES.contains(grantType);
   }
 
   @Override

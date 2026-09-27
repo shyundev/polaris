@@ -93,6 +93,22 @@ public class RSAKeyPairJWTBrokerTest {
   }
 
   @Test
+  public void testMissingGrantTypeIsNotSupported() throws Exception {
+    KeyProvider provider = new LocalRSAKeyProvider(PemUtils.generateKeyPair());
+    Algorithm algorithm =
+        Algorithm.RSA256(
+            (RSAPublicKey) provider.publicKey(), (RSAPrivateKey) provider.privateKey());
+    TokenBroker tokenBroker =
+        new JWTBroker(
+            Mockito.mock(PolarisMetaStoreManager.class),
+            Mockito.mock(PolarisCallContext.class),
+            420,
+            algorithm,
+            JWTBroker.buildVerifier(algorithm));
+    assertThat(tokenBroker.supportsGrantType(null)).isFalse();
+  }
+
+  @Test
   public void testVerifyReturnsNotRecognizedForForeignIssuer() throws Exception {
     var keyPair = PemUtils.generateKeyPair();
 
