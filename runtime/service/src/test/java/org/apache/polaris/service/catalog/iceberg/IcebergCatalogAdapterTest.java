@@ -33,6 +33,7 @@ import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.exceptions.BadRequestException;
 import org.apache.iceberg.inmemory.InMemoryCatalog;
+import org.apache.iceberg.rest.requests.CreateNamespaceRequest;
 import org.apache.iceberg.rest.requests.CreateTableRequest;
 import org.apache.iceberg.rest.requests.RenameTableRequest;
 import org.apache.iceberg.rest.responses.ListNamespacesResponse;
@@ -55,6 +56,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 public class IcebergCatalogAdapterTest {
@@ -290,15 +292,36 @@ public class IcebergCatalogAdapterTest {
         .hasMessageContaining(missing);
   }
 
+  @ParameterizedTest(name = "create namespace from {0} -> 400")
+  @ValueSource(strings = {"{}", "{\"namespace\":null}", "{\"properties\":{\"a\":\"b\"}}"})
+  void testCreateNamespaceRejectsMissingNamespace(String json) throws IOException {
+    CreateNamespaceRequest request = deserialize(json, CreateNamespaceRequest.class);
+    Assertions.assertThat(request.namespace()).isNull();
+    Assertions.assertThatThrownBy(
+            () ->
+                catalogAdapter.createNamespace(
+                    FEDERATED_CATALOG_NAME,
+                    request,
+                    null,
+                    testServices.realmContext(),
+                    testServices.securityContext()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid namespace: null");
+  }
+
   /**
    * Deserializes a rename request the same way the server does, i.e. with field-level visibility
    * and without invoking {@link RenameTableRequest#validate()}. This is the only way to obtain a
    * request whose {@code source} or {@code destination} is null, since the builder rejects nulls.
    */
   private static RenameTableRequest renameRequest(String json) throws IOException {
+    return deserialize(json, RenameTableRequest.class);
+  }
+
+  private static <T> T deserialize(String json, Class<T> type) throws IOException {
     ObjectMapper mapper = new ObjectMapper();
     new PolarisIcebergObjectMapperCustomizer("1M").customize(mapper);
-    return mapper.readValue(json, RenameTableRequest.class);
+    return mapper.readValue(json, type);
   }
 
   /**
