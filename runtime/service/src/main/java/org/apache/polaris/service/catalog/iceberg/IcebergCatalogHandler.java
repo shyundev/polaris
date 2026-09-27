@@ -217,6 +217,18 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
     return catalogEntity;
   }
 
+  private int maxCommitRetries() {
+    return realmConfig()
+        .getConfig(FeatureConfiguration.ICEBERG_COMMIT_MAX_RETRIES, getResolvedCatalogEntity());
+  }
+
+  private boolean rollbackCompactionOnConflicts() {
+    return realmConfig()
+        .getConfig(
+            FeatureConfiguration.ICEBERG_ROLLBACK_COMPACTION_ON_CONFLICTS,
+            getResolvedCatalogEntity());
+  }
+
   @Override
   protected void initializeCatalog() {
     CatalogEntity resolvedCatalogEntity = getResolvedCatalogEntity();
@@ -1357,7 +1369,12 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
       }
       try {
         return catalogHandlerUtils()
-            .updateTable(baseCatalog, tableIdentifier, applyUpdateFilters(request));
+            .updateTable(
+                baseCatalog,
+                tableIdentifier,
+                applyUpdateFilters(request),
+                maxCommitRetries(),
+                rollbackCompactionOnConflicts());
       } catch (CommitFailedException e) {
         // Concurrent same-key update: the race winner committed the key atomically with its
         // metadata change, so a single fresh lookup is enough to replay instead of surfacing 409.
@@ -1370,7 +1387,12 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
     }
 
     return catalogHandlerUtils()
-        .updateTable(baseCatalog, tableIdentifier, applyUpdateFilters(request));
+        .updateTable(
+            baseCatalog,
+            tableIdentifier,
+            applyUpdateFilters(request),
+            maxCommitRetries(),
+            rollbackCompactionOnConflicts());
   }
 
   /**
@@ -1400,7 +1422,12 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
       throw new BadRequestException("Cannot update table on static-facade external catalogs.");
     }
     return catalogHandlerUtils()
-        .updateTable(baseCatalog, tableIdentifier, applyUpdateFilters(request));
+        .updateTable(
+            baseCatalog,
+            tableIdentifier,
+            applyUpdateFilters(request),
+            maxCommitRetries(),
+            rollbackCompactionOnConflicts());
   }
 
   public void dropTableWithoutPurge(TableIdentifier tableIdentifier) {
@@ -1705,7 +1732,7 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
     }
     rejectClientSpecifiedLocationIfDisallowed(request);
     return catalogHandlerUtils()
-        .updateView(viewCatalog, viewIdentifier, applyUpdateFilters(request));
+        .updateView(viewCatalog, viewIdentifier, applyUpdateFilters(request), maxCommitRetries());
   }
 
   public void dropView(TableIdentifier viewIdentifier) {

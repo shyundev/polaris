@@ -407,7 +407,7 @@ public record TestServices(
 
       ReservedProperties reservedProperties = ReservedProperties.NONE;
 
-      CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils(realmConfig);
+      CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils();
 
       @SuppressWarnings("unchecked")
       Instance<FederatedCatalogFactory> federatedCatalogFactory = Mockito.mock(Instance.class);

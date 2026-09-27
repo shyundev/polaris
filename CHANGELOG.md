@@ -150,6 +150,10 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- The `polaris.config.iceberg-commit-max-retries` and
+  `polaris.config.rollback.compaction.on-conflicts.enabled` catalog properties now take effect.
+  Both settings were read once per server, from the realm of the first Iceberg REST request, so
+  catalog properties were ignored and all realms used that first realm's values.
 - Re-creating an existing namespace now returns `409 Conflict` instead of `403 Forbidden` when
   `OPTIMIZED_SIBLING_CHECK` is on. Namespace creation checks for an existing namespace before
   validating locations, as table and view creation already do, so the existing namespace's own

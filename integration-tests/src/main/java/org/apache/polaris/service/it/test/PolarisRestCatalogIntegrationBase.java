@@ -51,9 +51,11 @@ import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DataFiles;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableMetadataParser;
+import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.TableProperties;
 import org.apache.iceberg.Transaction;
 import org.apache.iceberg.UpdatePartitionSpec;
@@ -2216,6 +2218,55 @@ public abstract class PolarisRestCatalogIntegrationBase extends CatalogTests<RES
     } finally {
       genericTableApi.purge(currentCatalogName, namespace);
     }
+  }
+
+  @CatalogConfig(properties = {"polaris.config.rollback.compaction.on-conflicts.enabled", "true"})
+  @Test
+  public void testRollbackCompactionOnConflictsCatalogConfig() {
+    Namespace namespace = Namespace.of("ns1");
+    restCatalog.createNamespace(namespace);
+    try {
+      commitAppendBasedOnSnapshotBeforeCompaction(namespace);
+    } finally {
+      catalogApi.purge(currentCatalogName, namespace);
+    }
+  }
+
+  @Test
+  public void testRollbackCompactionOnConflictsDisabledByDefault() {
+    Namespace namespace = Namespace.of("ns1");
+    restCatalog.createNamespace(namespace);
+    try {
+      assertThatThrownBy(() -> commitAppendBasedOnSnapshotBeforeCompaction(namespace))
+          .isInstanceOf(CommitFailedException.class);
+    } finally {
+      catalogApi.purge(currentCatalogName, namespace);
+    }
+  }
+
+  private void commitAppendBasedOnSnapshotBeforeCompaction(Namespace namespace) {
+    TableIdentifier tableIdentifier = TableIdentifier.of(namespace, "tbl1");
+    Table table = restCatalog.buildTable(tableIdentifier, SCHEMA).withPartitionSpec(SPEC).create();
+    table.newFastAppend().appendFile(FILE_A).commit();
+
+    TableOperations writerOps = ((BaseTable) restCatalog.loadTable(tableIdentifier)).operations();
+    TableMetadata writerBase = writerOps.current();
+    Snapshot writerSnapshot =
+        new BaseTable(writerOps, tableIdentifier.toString())
+            .newFastAppend()
+            .appendFile(FILE_C)
+            .apply();
+
+    table
+        .newRewrite()
+        .deleteFile(FILE_A)
+        .addFile(FILE_B)
+        .set("polaris.internal.conflict-resolution.by-operation-type.replace", "rollback")
+        .commit();
+
+    writerOps.commit(
+        writerBase,
+        TableMetadata.buildFrom(writerBase).setBranchSnapshot(writerSnapshot, "main").build());
   }
 
   @Test
