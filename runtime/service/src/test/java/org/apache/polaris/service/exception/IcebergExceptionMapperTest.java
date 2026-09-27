@@ -21,6 +21,7 @@ package org.apache.polaris.service.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.azure.core.exception.AzureException;
+import com.azure.core.exception.ClientAuthenticationException;
 import com.azure.core.exception.HttpResponseException;
 import com.google.cloud.storage.StorageException;
 import jakarta.ws.rs.core.Response;
@@ -68,6 +69,7 @@ public class IcebergExceptionMapperTest {
             Arguments.of(new AzureException("FORBIDDEN"), 403),
             Arguments.of(new AzureException("Not Authorized"), 403),
             Arguments.of(new AzureException("Access Denied"), 403),
+            Arguments.of(new ClientAuthenticationException("Failed to acquire a token", null), 500),
             Arguments.of(S3Exception.builder().message("Access denied").build(), 403),
             Arguments.of(
                 StsException.builder()

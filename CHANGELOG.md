@@ -150,6 +150,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- Iceberg REST: an Azure authentication failure without an HTTP response, such as a missing or
+  expired Azure identity, is now returned as an Iceberg error response instead of failing inside
+  the exception mapper with a `NullPointerException`.
 - Re-creating an existing namespace now returns `409 Conflict` instead of `403 Forbidden` when
   `OPTIMIZED_SIBLING_CHECK` is on. Namespace creation checks for an existing namespace before
   validating locations, as table and view creation already do, so the existing namespace's own

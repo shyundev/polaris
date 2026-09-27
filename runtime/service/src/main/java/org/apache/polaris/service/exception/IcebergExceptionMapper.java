@@ -213,7 +213,8 @@ public class IcebergExceptionMapper implements ExceptionMapper<RuntimeException>
     return switch (t) {
       case S3Exception s3e -> s3e.statusCode();
       case StsException stse -> stse.statusCode();
-      case HttpResponseException hre -> hre.getResponse().getStatusCode();
+      case HttpResponseException hre ->
+          hre.getResponse() != null ? hre.getResponse().getStatusCode() : UNKNOWN_CLOUD_HTTP_CODE;
       case StorageException se -> se.getCode();
       default -> UNKNOWN_CLOUD_HTTP_CODE;
     };
