@@ -18,7 +18,9 @@
  */
 package org.apache.polaris.service.http;
 
+import java.util.Locale;
 import org.apache.polaris.core.DigestUtils;
+import org.jspecify.annotations.Nullable;
 
 /** Utility class that encapsulates logic pertaining to Iceberg REST specific concepts. */
 public class IcebergHttpUtil {
@@ -32,14 +34,33 @@ public class IcebergHttpUtil {
    * @return the generated ETag
    */
   public static String generateETagForMetadataFileLocation(String metadataFileLocation) {
+    return generateETagForMetadataFileLocation(metadataFileLocation, null);
+  }
+
+  /**
+   * Generate an ETag for a table loaded with the given {@code snapshots} query parameter. Loads
+   * that return only the referenced snapshots get a different ETag than loads that return all
+   * snapshots of the same metadata file.
+   *
+   * @param metadataFileLocation the metadata file location of the loaded table
+   * @param snapshots the {@code snapshots} query parameter, {@code null} if absent
+   * @return the generated ETag
+   */
+  public static String generateETagForMetadataFileLocation(
+      String metadataFileLocation, @Nullable String snapshots) {
     if (metadataFileLocation == null) {
       // Throw a more appropriate exception than letting DigestUtils die randomly.
       throw new IllegalArgumentException("Unable to generate etag for null metadataFileLocation");
     }
 
+    String eTagSource =
+        snapshots == null || snapshots.equalsIgnoreCase("all")
+            ? metadataFileLocation
+            : metadataFileLocation + "?snapshots=" + snapshots.toLowerCase(Locale.ROOT);
+
     // Use hash of metadata location since we don't want clients to use the ETag to try to extract
     // the metadata file location
-    String hashedMetadataFileLocation = DigestUtils.sha256Hex(metadataFileLocation);
+    String hashedMetadataFileLocation = DigestUtils.sha256Hex(eTagSource);
 
     // always issue a weak ETag since we semantically compare metadata, not its content byte-by-byte
     return "W/\"" + hashedMetadataFileLocation + "\"";

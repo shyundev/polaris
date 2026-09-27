@@ -66,6 +66,7 @@ import org.apache.polaris.service.http.IfNoneMatch;
 import org.apache.polaris.service.types.CommitTableRequest;
 import org.apache.polaris.service.types.CommitViewRequest;
 import org.apache.polaris.service.types.NotificationRequest;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -188,13 +189,15 @@ public class IcebergCatalogAdapter
   private Response.ResponseBuilder tryInsertETagHeader(
       Response.ResponseBuilder builder,
       LoadTableResponse response,
+      @Nullable String snapshots,
       String namespace,
       String tableName) {
     if (response.metadataLocation() != null) {
       builder =
           builder.header(
               HttpHeaders.ETAG,
-              IcebergHttpUtil.generateETagForMetadataFileLocation(response.metadataLocation()));
+              IcebergHttpUtil.generateETagForMetadataFileLocation(
+                  response.metadataLocation(), snapshots));
     } else {
       LOGGER
           .atWarn()
@@ -305,7 +308,7 @@ public class IcebergCatalogAdapter
                 catalog.createTableDirect(
                     ns, createTableRequest, delegationModes, refreshCredentialsEndpoint);
             return tryInsertETagHeader(
-                    Response.ok(response), response, namespace, createTableRequest.name())
+                    Response.ok(response), response, null, namespace, createTableRequest.name())
                 .build();
           }
         });
@@ -366,7 +369,8 @@ public class IcebergCatalogAdapter
             return Response.notModified().build();
           }
 
-          return tryInsertETagHeader(Response.ok(response.get()), response.get(), namespace, table)
+          return tryInsertETagHeader(
+                  Response.ok(response.get()), response.get(), snapshots, namespace, table)
               .build();
         });
   }
@@ -453,7 +457,7 @@ public class IcebergCatalogAdapter
                   delegationModes,
                   getRefreshCredentialsEndpoint(delegationModes, prefix, tableIdentifier));
           return tryInsertETagHeader(
-                  Response.ok(response), response, namespace, registerTableRequest.name())
+                  Response.ok(response), response, null, namespace, registerTableRequest.name())
               .build();
         });
   }

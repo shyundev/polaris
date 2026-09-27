@@ -150,6 +150,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- Loading a table with `snapshots=refs` now returns a different ETag than loading it with all
+  snapshots, as the Iceberg REST specification requires. An ETag received for one mode no longer
+  makes a load in the other mode return `304 Not Modified`.
 - Re-creating an existing namespace now returns `409 Conflict` instead of `403 Forbidden` when
   `OPTIMIZED_SIBLING_CHECK` is on. Namespace creation checks for an existing namespace before
   validating locations, as table and view creation already do, so the existing namespace's own

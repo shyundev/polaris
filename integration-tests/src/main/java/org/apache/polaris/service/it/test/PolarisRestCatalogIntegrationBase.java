@@ -2255,6 +2255,65 @@ public abstract class PolarisRestCatalogIntegrationBase extends CatalogTests<RES
   }
 
   @Test
+  public void testLoadTableETagDependsOnSnapshotsMode() {
+    Namespace namespace = Namespace.of("ns1");
+    restCatalog.createNamespace(namespace);
+    try {
+      TableIdentifier tableIdentifier = TableIdentifier.of(namespace, "tbl1");
+
+      restCatalog.createTable(tableIdentifier, SCHEMA);
+
+      Table table = restCatalog.loadTable(tableIdentifier);
+
+      // Create an orphaned snapshot:
+      table.newAppend().appendFile(FILE_A).commit();
+      long snapshotIdA = table.currentSnapshot().snapshotId();
+      table.newAppend().appendFile(FILE_B).commit();
+      table.manageSnapshots().setCurrentSnapshot(snapshotIdA).commit();
+
+      String ns =
+          NamespaceUtils.joinNamespace(namespace, NamespaceUtils.DEFAULT_NAMESPACE_SEPARATOR);
+      Map<String, String> tablePath =
+          Map.of("cat", currentCatalogName, "ns", ns, "table", tableIdentifier.name());
+
+      String refsETag;
+      try (Response refsResponse =
+          catalogApi
+              .request(
+                  "v1/{cat}/namespaces/{ns}/tables/{table}", tablePath, Map.of("snapshots", "refs"))
+              .get()) {
+        assertThat(refsResponse.getStatus()).isEqualTo(Response.Status.OK.getStatusCode());
+        refsETag = refsResponse.getHeaderString(HttpHeaders.ETAG);
+      }
+      assertThat(refsETag).isNotNull();
+
+      try (Response refsResponse =
+          catalogApi
+              .request(
+                  "v1/{cat}/namespaces/{ns}/tables/{table}", tablePath, Map.of("snapshots", "refs"))
+              .header(HttpHeaders.IF_NONE_MATCH, refsETag)
+              .get()) {
+        assertThat(refsResponse.getStatus())
+            .isEqualTo(Response.Status.NOT_MODIFIED.getStatusCode());
+      }
+
+      try (Response allResponse =
+          catalogApi
+              .request(
+                  "v1/{cat}/namespaces/{ns}/tables/{table}", tablePath, Map.of("snapshots", "all"))
+              .header(HttpHeaders.IF_NONE_MATCH, refsETag)
+              .get()) {
+        assertThat(allResponse.getStatus()).isEqualTo(Response.Status.OK.getStatusCode());
+        assertThat(allResponse.getHeaderString(HttpHeaders.ETAG)).isNotEqualTo(refsETag);
+        assertThat(allResponse.readEntity(LoadTableResponse.class).tableMetadata().snapshots())
+            .hasSize(2);
+      }
+    } finally {
+      genericTableApi.purge(currentCatalogName, namespace);
+    }
+  }
+
+  @Test
   public void testCreateGenericTableWithReservedProperty() {
     Namespace namespace = Namespace.of("ns1");
     restCatalog.createNamespace(namespace);

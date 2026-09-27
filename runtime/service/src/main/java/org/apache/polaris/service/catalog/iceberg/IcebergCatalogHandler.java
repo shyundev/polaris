@@ -1171,7 +1171,8 @@ public abstract class IcebergCatalogHandler extends CatalogHandler implements Au
         // TODO: Refactor null-checking into the helper method once we create a more canonical
         // interface for associate etags with entities.
         String tableETag =
-            IcebergHttpUtil.generateETagForMetadataFileLocation(tableEntity.getMetadataLocation());
+            IcebergHttpUtil.generateETagForMetadataFileLocation(
+                tableEntity.getMetadataLocation(), snapshots);
         if (ifNoneMatch.anyMatch(tableETag)) {
           return Optional.empty();
         }
