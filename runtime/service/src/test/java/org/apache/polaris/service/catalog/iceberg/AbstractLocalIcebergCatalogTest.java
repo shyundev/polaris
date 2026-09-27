@@ -717,6 +717,26 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
   }
 
   @Test
+  public void commitWithRollbackEnabledOnTableWithoutSnapshotsFailsWithCommitConflict() {
+    Schema schema = new Schema(Types.NestedField.required(1, "id", Types.LongType.get()));
+    TableMetadata base =
+        TableMetadata.newTableMetadata(
+            schema, PartitionSpec.unpartitioned(), "file:///tmp/t", Map.of());
+    TableOperations ops = mock(TableOperations.class);
+    when(ops.current()).thenReturn(base);
+
+    UpdateTableRequest request =
+        new UpdateTableRequest(
+            List.of(new UpdateRequirement.AssertCurrentSchemaID(base.currentSchemaId() + 1)),
+            List.of());
+    CatalogHandlerUtils catalogHandlerUtils = new CatalogHandlerUtils(5, true);
+
+    assertThatThrownBy(() -> catalogHandlerUtils.commit(ops, request))
+        .isInstanceOf(CommitFailedException.class)
+        .hasMessageContaining("current schema changed");
+  }
+
+  @Test
   public void testConcurrentWritesWithRollbackWithNonReplaceSnapshotInBetween() {
     LocalIcebergCatalog catalog = this.catalog();
     if (this.requiresNamespaceCreate()) {

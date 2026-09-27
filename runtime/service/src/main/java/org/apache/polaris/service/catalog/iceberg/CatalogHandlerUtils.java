@@ -419,7 +419,7 @@ public class CatalogHandlerUtils {
                   LOGGER.debug(
                       "Attempting to Rollback replace operations for table={}, with current-snapshot-id={}",
                       base.uuid(),
-                      base.currentSnapshot().snapshotId());
+                      currentSnapshotId(base));
                   UpdateRequirement.AssertRefSnapshotID assertRefSnapshotId =
                       findAssertRefSnapshotID(request);
                   MetadataUpdate.SetSnapshotRef setSnapshotRef = findSetSnapshotRefUpdate(request);
@@ -429,7 +429,7 @@ public class CatalogHandlerUtils {
                     LOGGER.debug(
                         "Giving up on Rollback replace operations for table={}, with current-snapshot-id={}, as operation doesn't attempts to add a single snapshot",
                         base.uuid(),
-                        base.currentSnapshot().snapshotId());
+                        currentSnapshotId(base));
                     // wrap and rethrow outside of tasks to avoid unnecessary retry
                     throw new ValidationFailureException(e);
                   }
@@ -447,7 +447,7 @@ public class CatalogHandlerUtils {
                   LOGGER.info(
                       "Attempting to Rollback replace operation for table={}, with current-snapshot-id={}, to snapshot={}",
                       base.uuid(),
-                      base.currentSnapshot().snapshotId(),
+                      currentSnapshotId(base),
                       snapshotToBeAdded.snapshot().snapshotId());
 
                   List<MetadataUpdate> metadataUpdates =
@@ -483,8 +483,8 @@ public class CatalogHandlerUtils {
                   LOGGER.info(
                       "Successfully roll-backed replace operation for table={}, with current-snapshot-id={}, to snapshot={}",
                       base.uuid(),
-                      base.currentSnapshot().snapshotId(),
-                      newBase.currentSnapshot().snapshotId());
+                      currentSnapshotId(base),
+                      currentSnapshotId(newBase));
                 }
                 // double check if the requirements passes now.
                 try {
@@ -521,6 +521,11 @@ public class CatalogHandlerUtils {
     }
 
     return ops.current();
+  }
+
+  private static @Nullable Long currentSnapshotId(TableMetadata metadata) {
+    Snapshot currentSnapshot = metadata.currentSnapshot();
+    return currentSnapshot == null ? null : currentSnapshot.snapshotId();
   }
 
   private UpdateRequirement.AssertRefSnapshotID findAssertRefSnapshotID(

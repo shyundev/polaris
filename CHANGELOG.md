@@ -150,6 +150,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- With `ICEBERG_ROLLBACK_COMPACTION_ON_CONFLICTS` enabled, a conflicting commit to a table without
+  a current snapshot now fails with `409 Conflict` instead of `500 Internal Server Error` caused by
+  a `NullPointerException`.
 - Re-creating an existing namespace now returns `409 Conflict` instead of `403 Forbidden` when
   `OPTIMIZED_SIBLING_CHECK` is on. Namespace creation checks for an existing namespace before
   validating locations, as table and view creation already do, so the existing namespace's own
