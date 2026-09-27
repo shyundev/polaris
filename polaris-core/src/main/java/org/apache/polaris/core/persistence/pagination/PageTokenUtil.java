@@ -137,7 +137,7 @@ public final class PageTokenUtil {
       return READ_EVERYTHING;
     }
     if (requestedPageSize != null) {
-      checkArgument(requestedPageSize >= 0, "Invalid page size");
+      checkArgument(requestedPageSize > 0, "Invalid page size");
     }
     if (requestedPageToken != null && !requestedPageToken.isEmpty()) {
       var pageToken = deserializePageToken(requestedPageToken);

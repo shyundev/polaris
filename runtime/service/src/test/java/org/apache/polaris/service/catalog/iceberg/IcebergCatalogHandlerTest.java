@@ -995,7 +995,6 @@ class IcebergCatalogHandlerTest {
     "5000, 100, 100",
     "100, 100, 100",
     "10, 100, 10",
-    "0, 100, 0",
   })
   void listTablesBoundsRequestedPageSizeByConfiguredMaximum(
       int requestedPageSize, int maxPageSize, int expectedPageSize) {

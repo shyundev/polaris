@@ -80,7 +80,7 @@ class MalformedPageTokenTest {
    */
   @ParameterizedTest(name = "pageSize={0}")
   @NullSource
-  @ValueSource(ints = {0, 5})
+  @ValueSource(ints = {1, 5})
   void nullTokenIsRejectedWithAndWithoutPageSize(Integer pageSize) {
     String nullToken = smile(null);
     assertThatThrownBy(() -> PageToken.build(nullToken, pageSize, -1, () -> true))

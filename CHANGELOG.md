@@ -150,6 +150,8 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- Iceberg REST: listing namespaces, tables or views with `pageSize=0` now returns `400 Bad Request`
+  instead of an empty page with no `next-page-token`.
 - Re-creating an existing namespace now returns `409 Conflict` instead of `403 Forbidden` when
   `OPTIMIZED_SIBLING_CHECK` is on. Namespace creation checks for an existing namespace before
   validating locations, as table and view creation already do, so the existing namespace's own

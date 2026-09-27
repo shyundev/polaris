@@ -119,6 +119,9 @@ class PageTokenTest {
     soft.assertThatThrownBy(() -> PageToken.build(null, -1, -1, () -> true))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Invalid page size");
+    soft.assertThatThrownBy(() -> PageToken.build(null, 0, -1, () -> true))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid page size");
 
     // With pagination disabled the request is ignored wholesale, as it was before page size
     // bounding existed, so an invalid size must not start failing the request.
