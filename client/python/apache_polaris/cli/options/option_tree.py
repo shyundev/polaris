@@ -601,6 +601,11 @@ class OptionTree:
                             "Show only principal roles assigned to this catalog role",
                         ),
                         Argument(
+                            Arguments.CATALOG,
+                            str,
+                            "The name of the catalog containing the catalog role",
+                        ),
+                        Argument(
                             Arguments.PRINCIPAL,
                             str,
                             "Show only principal roles assigned to this principal",

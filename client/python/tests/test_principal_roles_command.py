@@ -125,11 +125,24 @@ class TestPrincipalRolesCommand(CLITestBase):
 
     def test_principal_role_list_catalog_role(self) -> None:
         mock_client = self.build_mock_client()
-        mock_client.list_principal_roles.return_value.roles = []
+        mock_client.list_assignee_principal_roles_for_catalog_role.return_value.roles = []
         self.mock_execute(
-            mock_client, ["principal-roles", "list", "--catalog-role", "bar"]
+            mock_client,
+            ["principal-roles", "list", "--catalog", "foo", "--catalog-role", "bar"],
         )
-        mock_client.list_principal_roles.assert_called_with("bar")
+        mock_client.list_assignee_principal_roles_for_catalog_role.assert_called_with(
+            "foo", "bar"
+        )
+        mock_client.list_principal_roles.assert_not_called()
+
+    def test_principal_role_list_catalog_role_without_catalog(self) -> None:
+        mock_client = self.build_mock_client()
+        self.check_exception(
+            lambda: self.mock_execute(
+                mock_client, ["principal-roles", "list", "--catalog-role", "bar"]
+            ),
+            "Missing required argument: --catalog when --catalog-role is set",
+        )
 
     def test_principal_role_summarize(self) -> None:
         mock_client = self.build_mock_client()

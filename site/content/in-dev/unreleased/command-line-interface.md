@@ -682,6 +682,7 @@ options:
 
 Command Options:
   --catalog-role CATALOG_ROLE  Show only principal roles assigned to this catalog role
+  --catalog CATALOG            The name of the catalog containing the catalog role
   --principal PRINCIPAL        Show only principal roles assigned to this principal
 ```
 
@@ -690,9 +691,9 @@ Command Options:
 ```
 polaris principal-roles list
 
-polaris principal-roles --principal d.knuth
+polaris principal-roles list --principal d.knuth
 
-polaris principal-roles --catalog-role super_secret_data
+polaris principal-roles list --catalog some_catalog --catalog-role super_secret_data
 ```
 
 #### update

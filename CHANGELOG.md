@@ -229,6 +229,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - The MongoDB readiness check is now shown in `/q/health` only when the NoSQL MongoDB backend is
   selected. Other persistence backends no longer show the unused check. MongoDB deployments keep
   readiness monitoring without configuration changes.
+- Python CLI `principal-roles list --catalog-role` now lists the principal roles assigned to that
+  catalog role, using the catalog given by the new `--catalog` option. Previously, the command
+  always failed with a pydantic `ValidationError`.
 
 ### Commits
 

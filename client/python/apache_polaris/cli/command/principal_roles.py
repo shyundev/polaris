@@ -82,6 +82,11 @@ class PrincipalRolesCommand(Command):
                     f"You may provide either {Argument.to_flag_name(Arguments.PRINCIPAL)} or"
                     f" {Argument.to_flag_name(Arguments.CATALOG_ROLE)}, but not both"
                 )
+            if self.catalog_role_name and not self.catalog_name:
+                raise CliError(
+                    f"Missing required argument: {Argument.to_flag_name(Arguments.CATALOG)}"
+                    f" when {Argument.to_flag_name(Arguments.CATALOG_ROLE)} is set."
+                )
         if self.principal_roles_subcommand in {Subcommands.GRANT, Subcommands.REVOKE}:
             if not self.principal_name:
                 raise CliError(
@@ -105,9 +110,10 @@ class PrincipalRolesCommand(Command):
             print(api.get_principal_role(principal_role_name).to_json())
         elif self.principal_roles_subcommand == Subcommands.LIST:
             if self.catalog_role_name:
-                for principal_role in api.list_principal_roles(
-                    self.catalog_role_name
-                ).roles:
+                principal_roles = api.list_assignee_principal_roles_for_catalog_role(
+                    cast(str, self.catalog_name), self.catalog_role_name
+                ).roles
+                for principal_role in principal_roles:
                     print(principal_role.to_json())
             elif self.principal_name:
                 for principal_role in api.list_principal_roles_assigned(
