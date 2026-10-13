@@ -229,6 +229,8 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - The MongoDB readiness check is now shown in `/q/health` only when the NoSQL MongoDB backend is
   selected. Other persistence backends no longer show the unused check. MongoDB deployments keep
   readiness monitoring without configuration changes.
+- Helm chart: `tracing.enabled: true` now sets `quarkus.otel.sdk.disabled=false`. Previously the
+  OpenTelemetry SDK stayed disabled by the Polaris default and no traces were exported.
 
 ### Commits
 

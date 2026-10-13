@@ -345,6 +345,12 @@ tests:
     asserts:
       - matchRegex: { path: 'data["application.properties"]', pattern: "quarkus.otel.traces.sampler=always_off" }
 
+  - it: should enable tracing
+    set:
+      tracing: { enabled: true }
+    asserts:
+      - matchRegex: { path: 'data["application.properties"]', pattern: "quarkus.otel.sdk.disabled=false" }
+
   - it: should disable tracing by default
     asserts:
       - matchRegex: { path: 'data["application.properties"]', pattern: "quarkus.otel.sdk.disabled=true" }
