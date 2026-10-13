@@ -91,6 +91,7 @@ import org.apache.iceberg.view.ViewRepresentation;
 import org.apache.polaris.core.config.FeatureConfiguration;
 import org.apache.polaris.core.config.RealmConfig;
 import org.apache.polaris.core.entity.PolarisEntitySubType;
+import org.apache.polaris.service.catalog.SupportsNamespacePropertyUpdates;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -234,13 +235,19 @@ public class CatalogHandlerUtils {
     Map<String, String> startProperties = catalog.loadNamespaceMetadata(namespace);
     Set<String> missing = Sets.difference(removals, startProperties.keySet());
 
-    if (!updates.isEmpty()) {
-      catalog.setProperties(namespace, updates);
-    }
+    if (!updates.isEmpty()
+        && !removals.isEmpty()
+        && catalog instanceof SupportsNamespacePropertyUpdates propertyUpdatesCatalog) {
+      propertyUpdatesCatalog.updateProperties(namespace, updates, removals);
+    } else {
+      if (!updates.isEmpty()) {
+        catalog.setProperties(namespace, updates);
+      }
 
-    if (!removals.isEmpty()) {
-      // remove the original set just in case there was an update just after loading properties
-      catalog.removeProperties(namespace, removals);
+      if (!removals.isEmpty()) {
+        // remove the original set just in case there was an update just after loading properties
+        catalog.removeProperties(namespace, removals);
+      }
     }
 
     return UpdateNamespacePropertiesResponse.builder()

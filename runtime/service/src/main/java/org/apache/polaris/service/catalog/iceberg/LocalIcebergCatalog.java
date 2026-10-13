@@ -138,6 +138,7 @@ import org.apache.polaris.core.storage.PolarisStorageConfigurationInfo;
 import org.apache.polaris.core.storage.StorageAccessConfig;
 import org.apache.polaris.core.storage.StorageLocation;
 import org.apache.polaris.core.storage.StorageUtil;
+import org.apache.polaris.service.catalog.SupportsNamespacePropertyUpdates;
 import org.apache.polaris.service.catalog.SupportsNotifications;
 import org.apache.polaris.service.catalog.common.CatalogUtils;
 import org.apache.polaris.service.catalog.common.LocationUtils;
@@ -161,7 +162,10 @@ import org.slf4j.LoggerFactory;
 
 /** Defines the relationship between PolarisEntities and Iceberg's business logic. */
 public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
-    implements SupportsNamespaces, SupportsNotifications, Closeable {
+    implements SupportsNamespaces,
+        SupportsNamespacePropertyUpdates,
+        SupportsNotifications,
+        Closeable {
   private static final Logger LOGGER = LoggerFactory.getLogger(LocalIcebergCatalog.class);
 
   private static final Joiner SLASH = Joiner.on("/");
@@ -891,6 +895,14 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
   @Override
   public boolean setProperties(Namespace namespace, Map<String, String> properties)
       throws NoSuchNamespaceException {
+    updateProperties(namespace, properties, Set.of());
+    return true;
+  }
+
+  @Override
+  public void updateProperties(
+      Namespace namespace, Map<String, String> properties, Set<String> removals)
+      throws NoSuchNamespaceException {
     PolarisResolvedPathWrapper resolvedEntities =
         resolvedEntityView.getResolvedPath(ResolvedPathKey.ofNamespace(namespace));
     if (resolvedEntities == null) {
@@ -941,6 +953,11 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
       }
     }
 
+    if (!removals.isEmpty()) {
+      removals.forEach(newProperties::remove);
+      updatedEntity = new PolarisEntity.Builder(entity).setProperties(newProperties).build();
+    }
+
     List<PolarisEntity> parentPath = resolvedEntities.getRawFullPath();
     PolarisEntity returnedEntity =
         Optional.ofNullable(
@@ -955,7 +972,6 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
     if (returnedEntity == null) {
       throw new CommitConflictException("Concurrent modification of namespace: %s", namespace);
     }
-    return true;
   }
 
   @Override

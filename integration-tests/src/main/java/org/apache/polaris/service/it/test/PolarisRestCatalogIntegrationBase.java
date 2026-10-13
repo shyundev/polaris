@@ -2327,6 +2327,24 @@ public abstract class PolarisRestCatalogIntegrationBase extends CatalogTests<RES
   }
 
   @Test
+  public void testUpdateAndRemoveNamespacePropertiesInOneRequest() {
+    Namespace namespace = Namespace.of("ns1");
+    restCatalog.createNamespace(namespace, ImmutableMap.of("a", "b", "c", "d"));
+    Invocation.Builder propertiesEndpoint =
+        catalogApi.request("v1/{cat}/namespaces/ns1/properties", Map.of("cat", currentCatalogName));
+    try (Response response =
+        propertiesEndpoint.post(
+            Entity.json(Map.of("updates", Map.of("e", "f"), "removals", List.of("a"))))) {
+      assertThat(response).returns(Response.Status.OK.getStatusCode(), Response::getStatus);
+    }
+    assertThat(restCatalog.loadNamespaceMetadata(namespace))
+        .containsEntry("c", "d")
+        .containsEntry("e", "f")
+        .doesNotContainKey("a");
+    genericTableApi.purge(currentCatalogName, namespace);
+  }
+
+  @Test
   public void testCreateTableWithReservedProperty() {
     Namespace namespace = Namespace.of("ns1");
     restCatalog.createNamespace(namespace);
