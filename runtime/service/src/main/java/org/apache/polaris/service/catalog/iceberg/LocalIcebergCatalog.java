@@ -1439,18 +1439,22 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
       LOGGER.debug("Validating no overlap with sibling tables or namespaces");
 
       // Create a fake IcebergTableLikeEntity to check for overlap, since no real entity
-      // has been created yet.
+      // has been created yet. If the table-like entity already exists, the fake entity carries its
+      // id so that the entity is not reported as overlapping with itself.
       var lastNamespace = resolvedNamespace.getLast();
+      PolarisEntity.Builder virtualEntityBuilder =
+          new PolarisEntity.Builder()
+              .setName(identifier.name())
+              .setType(PolarisEntityType.TABLE_LIKE)
+              .setSubType(PolarisEntitySubType.ICEBERG_TABLE)
+              .setParentId(lastNamespace.getId())
+              .setCatalogId(lastNamespace.getCatalogId())
+              .setProperties(Map.of(PolarisEntityConstants.ENTITY_BASE_LOCATION, location));
+      if (entity.getType() == PolarisEntityType.TABLE_LIKE) {
+        virtualEntityBuilder.setId(entity.getId());
+      }
       IcebergTableLikeEntity virtualEntity =
-          IcebergTableLikeEntity.of(
-              new PolarisEntity.Builder()
-                  .setName(identifier.name())
-                  .setType(PolarisEntityType.TABLE_LIKE)
-                  .setSubType(PolarisEntitySubType.ICEBERG_TABLE)
-                  .setParentId(lastNamespace.getId())
-                  .setCatalogId(lastNamespace.getCatalogId())
-                  .setProperties(Map.of(PolarisEntityConstants.ENTITY_BASE_LOCATION, location))
-                  .build());
+          IcebergTableLikeEntity.of(virtualEntityBuilder.build());
 
       validateNoLocationOverlap(virtualEntity, resolvedNamespace);
     }

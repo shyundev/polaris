@@ -19,6 +19,7 @@
 package org.apache.polaris.service.catalog.iceberg;
 
 import static org.apache.polaris.service.admin.PolarisAuthzTestBase.SCHEMA;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
@@ -297,6 +298,22 @@ public abstract class AbstractLocalIcebergCatalogOverlapTest {
         .isInstanceOf(ForbiddenException.class)
         .hasMessageContaining("Unable to create entity at location")
         .hasMessageContaining("conflicts with existing table or namespace");
+  }
+
+  @Test
+  public void testSetWriteDataPathUnderOwnTableLocation() {
+    Namespace ns = Namespace.of("overlap-write-data-path");
+    catalog().createNamespace(ns);
+
+    TableIdentifier table = TableIdentifier.of(ns, "t");
+    catalog().buildTable(table, SCHEMA).create();
+    String writeDataPath = catalog().loadTable(table).location() + "/alternative_data";
+
+    // The table's own location contains its data path; the table is not a sibling of itself.
+    catalog().loadTable(table).updateProperties().set("write.data.path", writeDataPath).commit();
+
+    assertThat(catalog().loadTable(table).properties())
+        .containsEntry("write.data.path", writeDataPath);
   }
 
   @Test

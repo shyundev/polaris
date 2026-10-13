@@ -409,7 +409,7 @@ public interface BasePersistence extends PolicyMappingPersistence {
    * <p>The entity's own ancestors, given by {@code parentPath}, are excluded: a parent namespace
    * whose location strictly contains the entity's location is not reported, since default locations
    * nest under the parent's location. An ancestor whose location equals the entity's location is
-   * still reported.
+   * still reported. The entity itself, matched by id, is never reported.
    *
    * @param callContext the polaris call context
    * @param parentPath the entity's resolved parent path: the catalog first, then each parent

@@ -209,6 +209,11 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
   with `403 Forbidden`. The JDBC, NoSQL, and in-memory implementations of `hasOverlappingSiblings`
   now exclude the entity's ancestors (when they strictly contain it) before reporting an overlap,
   matching the legacy sibling check.
+- Fixed `OPTIMIZED_SIBLING_CHECK` rejecting updates of an existing table whose locations sit under
+  the table's own location, such as setting `write.data.path` to a subdirectory of the table
+  location, with `403 Forbidden`. The JDBC, NoSQL, and in-memory implementations of
+  `hasOverlappingSiblings` reported the table itself as an overlapping sibling; they now skip the
+  entity being checked, matching the legacy sibling check.
 - Semantic-model create and update requests now require `semantic_model` JSON to be an object and
   validate every dataset source. Previously, invalid root shapes could bypass source validation or
   be accepted under the obsolete array contract.
