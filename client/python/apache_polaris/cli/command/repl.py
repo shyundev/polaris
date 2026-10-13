@@ -39,6 +39,7 @@ from apache_polaris.cli.constants import (
 from apache_polaris.cli.exceptions import CliError
 from apache_polaris.cli.options.option_tree import OptionTree
 from apache_polaris.cli.options.parser import Parser
+from apache_polaris.sdk.catalog.exceptions import ApiException as CatalogApiException
 from apache_polaris.sdk.management import PolarisDefaultApi
 from apache_polaris.sdk.management.exceptions import ApiException
 from apache_polaris.cli.command.profiles import ProfilesCommand
@@ -126,7 +127,7 @@ class PolarisRepl(Cmd):
             pass
         except KeyboardInterrupt:
             sys.stderr.write("Session interrupted. Type 'exit' to quit.\n")
-        except ApiException as e:
+        except (ApiException, CatalogApiException) as e:
             PolarisCli.print_api_exception(e)
         except CliError as e:
             sys.stderr.write(f"{e}\n")

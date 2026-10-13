@@ -229,6 +229,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - The MongoDB readiness check is now shown in `/q/health` only when the NoSQL MongoDB backend is
   selected. Other persistence backends no longer show the unused check. MongoDB deployments keep
   readiness monitoring without configuration changes.
+- Python CLI REPL now reports failed catalog API requests (for example `tables get` on a missing
+  table) with the same server error message as the non-interactive CLI. Previously, these errors
+  were printed as "An unexpected error occurred" followed by the raw HTTP response.
 
 ### Commits
 

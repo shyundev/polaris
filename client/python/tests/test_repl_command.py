@@ -24,6 +24,7 @@ from cli_test_utils import CLITestBase
 from apache_polaris.cli.command.repl import ReplCommand, PolarisRepl
 from apache_polaris.cli.constants import Commands
 from apache_polaris.cli.exceptions import CliError
+from apache_polaris.sdk.catalog.exceptions import ApiException as CatalogApiException
 from apache_polaris.sdk.management.exceptions import ApiException
 
 
@@ -92,6 +93,19 @@ class TestReplCommand(CLITestBase):
         repl = PolarisRepl(self.build_mock_client())
         repl.default("catalogs list")
         mock_print_api_exc.assert_called_once_with(api_exc)
+
+    @patch("apache_polaris.cli.polaris_cli.PolarisCli.print_api_exception")
+    @patch("apache_polaris.cli.options.parser.Parser.parse")
+    def test_repl_handles_catalog_api_exception(
+        self, mock_parse: MagicMock, mock_print_api_exc: MagicMock
+    ) -> None:
+        api_exc = CatalogApiException(status=404, reason="Not Found")
+        mock_parse.side_effect = api_exc
+        repl = PolarisRepl(self.build_mock_client())
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            repl.default("tables get --catalog c --namespace n t")
+        mock_print_api_exc.assert_called_once_with(api_exc)
+        self.assertNotIn("unexpected", mock_stderr.getvalue())
 
     @patch("apache_polaris.cli.options.parser.Parser.parse", side_effect=SystemExit(2))
     def test_repl_swallows_system_exit(self, _mock_parse: MagicMock) -> None:
