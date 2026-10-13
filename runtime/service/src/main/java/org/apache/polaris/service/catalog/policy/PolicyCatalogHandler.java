@@ -214,6 +214,10 @@ public abstract class PolicyCatalogHandler extends CatalogHandler {
     AuthorizationState authorizationState = new AuthorizationState(resolutionManifest);
     authorizer().resolveAuthorizationInputs(authorizationState, authorizationRequest);
 
+    ResolverStatus status = resolutionManifest.getPrimaryResolverStatusOrThrow();
+    if (status.getStatus() == ResolverStatus.StatusEnum.ENTITY_COULD_NOT_BE_RESOLVED) {
+      throw new NotFoundException("Catalog not found");
+    }
     PolarisResolvedPathWrapper targetCatalog =
         resolutionManifest.getResolvedReferenceCatalogEntity();
     if (targetCatalog == null) {

@@ -752,6 +752,19 @@ public class PolarisPolicyServiceIntegrationTest {
   }
 
   @Test
+  public void testGetApplicablePoliciesOnNonExistingCatalog() {
+    try (Response res =
+        policyApi
+            .request(
+                "polaris/v1/{cat}/applicable-policies",
+                Map.of("cat", "non_existing_catalog"),
+                Map.of())
+            .get()) {
+      Assertions.assertThat(res.getStatus()).isEqualTo(Response.Status.NOT_FOUND.getStatusCode());
+    }
+  }
+
+  @Test
   public void testGetApplicablePoliciesOnNonExistingTable() {
     restCatalog.createNamespace(NS1);
     policyApi.createPolicy(
