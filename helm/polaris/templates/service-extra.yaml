@@ -65,7 +65,7 @@ spec:
   {{- if $svc.internalTrafficPolicy }}
   internalTrafficPolicy: {{ $svc.internalTrafficPolicy }}
   {{- end }}
-  {{- if and $svc.trafficDistribution (ge (int $.Capabilities.KubeVersion.Minor) 31) }}
+  {{- if and $svc.trafficDistribution (ge (trimSuffix "+" $.Capabilities.KubeVersion.Minor | int) 31) }}
   trafficDistribution: {{ $svc.trafficDistribution }}
   {{- end }}
 {{- end }}

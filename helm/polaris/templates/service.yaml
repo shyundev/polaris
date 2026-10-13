@@ -59,6 +59,6 @@ spec:
   {{- if .Values.service.internalTrafficPolicy }}
   internalTrafficPolicy: {{ .Values.service.internalTrafficPolicy }}
   {{- end }}
-  {{- if and .Values.service.trafficDistribution (ge (int .Capabilities.KubeVersion.Minor) 31) }}
+  {{- if and .Values.service.trafficDistribution (ge (trimSuffix "+" .Capabilities.KubeVersion.Minor | int) 31) }}
   trafficDistribution: {{ .Values.service.trafficDistribution }}
   {{- end }}

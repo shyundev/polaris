@@ -259,6 +259,16 @@ tests:
       - equal:
           path: spec.trafficDistribution
           value: PreferClose
+  - it: should set service traffic distribution if Kubernetes minor version has a suffix
+    capabilities:
+      majorVersion: 1
+      minorVersion: "31+"
+    set:
+      managementService.trafficDistribution: PreferClose
+    asserts:
+      - equal:
+          path: spec.trafficDistribution
+          value: PreferClose
   - it: should not set service traffic distribution if Kubernetes version < 1.31
     capabilities:
       majorVersion: 1
