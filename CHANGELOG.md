@@ -110,6 +110,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- The admin tool `nosql maintenance-run` command now exits with code 5 when the maintenance run
+  fails. It previously exited with 0, so a failed run looked successful to schedulers such as the
+  Helm chart maintenance CronJob.
 - NoSQL commits resend unresolved object writes on retry, preventing successful commits from
   referencing objects left unwritten by a previous attempt.
 - The H2 relational JDBC init script no longer overwrites the recorded schema version. It now seeds
