@@ -185,6 +185,10 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - Registering a table whose stored metadata file is no longer readable no longer fails: with
   overwrite it replaces the metadata location, and without overwrite it reports the table as
   already existing.
+- Azure errors without an HTTP response, such as a failed Azure Identity token request, no longer
+  fail inside the exception mapper with a `NullPointerException`. They are mapped from their cause,
+  so an MSAL authentication failure gets its status code mapping, and otherwise return `500` with
+  an Iceberg error body.
 - Relational JDBC: the location-overlap check now escapes SQL `LIKE` wildcards (`%`, `_`) and the
   escape character (`\`) that appear literally in a table or namespace location. Previously these
   characters were interpreted as wildcards, which could over-fetch candidate rows and, for a literal

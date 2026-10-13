@@ -21,6 +21,7 @@ package org.apache.polaris.service.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.azure.core.exception.AzureException;
+import com.azure.core.exception.ClientAuthenticationException;
 import com.azure.core.exception.HttpResponseException;
 import com.google.cloud.storage.StorageException;
 import com.microsoft.aad.msal4j.MsalServiceException;
@@ -35,6 +36,7 @@ import org.apache.iceberg.exceptions.CommitStateUnknownException;
 import org.apache.iceberg.exceptions.RuntimeIOException;
 import org.apache.iceberg.exceptions.ValidationException;
 import org.apache.polaris.core.exceptions.FileIOUnknownHostException;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -68,6 +70,19 @@ public class IcebergExceptionMapperTest {
             Arguments.of(new AzureException("FORBIDDEN"), 403),
             Arguments.of(new AzureException("Not Authorized"), 403),
             Arguments.of(new AzureException("Access Denied"), 403),
+            Arguments.of(new ClientAuthenticationException("Failed to acquire a token", null), 500),
+            Arguments.of(
+                new ClientAuthenticationException(
+                    "ClientSecretCredential authentication failed",
+                    null,
+                    new MsalServiceException(
+                        "AADSTS7000222: client secret expired", "invalid_client") {
+                      @Override
+                      public Integer statusCode() {
+                        return 401;
+                      }
+                    }),
+                403),
             Arguments.of(S3Exception.builder().message("Access denied").build(), 403),
             Arguments.of(
                 StsException.builder()
@@ -166,5 +181,13 @@ public class IcebergExceptionMapperTest {
       assertThat(response.getStatus()).isEqualTo(statusCode);
       assertThat(response.getEntity()).extracting("message").isEqualTo(ex.getMessage());
     }
+  }
+
+  @Test
+  void azureExceptionWithoutResponseIsRetryable() {
+    assertThat(
+            IcebergExceptionMapper.isStorageProviderRetryableException(
+                new ClientAuthenticationException("Failed to acquire a token", null)))
+        .isTrue();
   }
 }

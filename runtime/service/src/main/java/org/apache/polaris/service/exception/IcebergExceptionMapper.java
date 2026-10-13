@@ -216,7 +216,8 @@ public class IcebergExceptionMapper implements ExceptionMapper<RuntimeException>
       case MsalServiceException mse ->
           Optional.ofNullable(mse.statusCode()).orElse(UNKNOWN_CLOUD_HTTP_CODE);
       case StsException stse -> stse.statusCode();
-      case HttpResponseException hre -> hre.getResponse().getStatusCode();
+      case HttpResponseException hre ->
+          hre.getResponse() != null ? hre.getResponse().getStatusCode() : UNKNOWN_CLOUD_HTTP_CODE;
       case StorageException se -> se.getCode();
       default -> UNKNOWN_CLOUD_HTTP_CODE;
     };
@@ -240,6 +241,11 @@ public class IcebergExceptionMapper implements ExceptionMapper<RuntimeException>
 
     if (containsAnyAccessDeniedHint(t.getMessage())) {
       return Optional.of(Status.FORBIDDEN.getStatusCode());
+    }
+
+    if (t instanceof HttpResponseException hre && hre.getResponse() == null) {
+      // No HTTP status to map, so leave it to a cloud exception further down the cause chain
+      return Optional.empty();
     }
 
     int httpCode = extractHttpCodeFromCloudException(t);
