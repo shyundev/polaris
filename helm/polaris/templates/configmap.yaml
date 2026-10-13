@@ -186,6 +186,7 @@ data:
 
     {{- /* Telemetry */ -}}
     {{- if .Values.tracing.enabled -}}
+    {{- $_ = set $map "quarkus.otel.sdk.disabled" false -}}
     {{- $_ = set $map "quarkus.otel.exporter.otlp.endpoint" .Values.tracing.endpoint -}}
     {{- if .Values.tracing.attributes -}}
     {{- $attributes := dict -}}

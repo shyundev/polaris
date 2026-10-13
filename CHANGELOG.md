@@ -266,6 +266,8 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - The Ranger authorizer no longer fails with `NoClassDefFoundError: javax/ws/rs/core/Cookie` when
   using `RangerAdminRESTClient` as the policy source. Ranger 2.9 no longer bundles the JAX-RS 1.x
   API, so `javax.ws.rs:jsr311-api` is now shipped with the Ranger extension (see #5728).
+- Helm chart: `tracing.enabled: true` now enables the OpenTelemetry SDK. Previously the SDK stayed
+  disabled by the Polaris default, so no traces were exported.
 
 ### Commits
 
