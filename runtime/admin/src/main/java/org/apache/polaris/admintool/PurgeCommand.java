@@ -18,8 +18,8 @@
  */
 package org.apache.polaris.admintool;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -33,7 +33,7 @@ public class PurgeCommand extends BaseMetaStoreCommand {
       paramLabel = "<realm>",
       required = true,
       description = "The name of a realm to purge.")
-  List<String> realms;
+  Set<String> realms;
 
   @Override
   public Integer call() {

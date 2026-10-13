@@ -44,4 +44,10 @@ public abstract class PurgeCommandTestBase {
   public void testPurge(LaunchResult result) {
     assertThat(result.getOutput()).contains("Purge completed successfully.");
   }
+
+  @Test
+  @Launch(value = {"purge", "-r", REALM1, "-r", REALM1})
+  public void testPurgeDuplicateRealm(LaunchResult result) {
+    assertThat(result.getOutput()).contains("Purge completed successfully.");
+  }
 }

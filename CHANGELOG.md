@@ -110,6 +110,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- The admin tool `purge` command no longer fails when the same realm is passed more than once. With
+  the relational JDBC backend, the repeated realm was purged and then reported as not bootstrapped,
+  and the command exited with code 4.
 - NoSQL commits resend unresolved object writes on retry, preventing successful commits from
   referencing objects left unwritten by a previous attempt.
 - The H2 relational JDBC init script no longer overwrites the recorded schema version. It now seeds
