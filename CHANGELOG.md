@@ -110,6 +110,8 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- REST endpoints that require a request body (Iceberg REST, management, generic table and policy
+  APIs) now return `400 Bad Request` instead of `500 Internal Server Error` when the body is empty.
 - NoSQL commits resend unresolved object writes on retry, preventing successful commits from
   referencing objects left unwritten by a previous attempt.
 - The H2 relational JDBC init script no longer overwrites the recorded schema version. It now seeds

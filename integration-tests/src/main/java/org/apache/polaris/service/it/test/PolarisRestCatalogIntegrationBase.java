@@ -1372,6 +1372,31 @@ public abstract class PolarisRestCatalogIntegrationBase extends CatalogTests<RES
     }
   }
 
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "namespaces",
+        "namespaces/ns1/properties",
+        "namespaces/ns1/tables",
+        "namespaces/ns1/tables/tbl1",
+        "tables/rename",
+        "transactions/commit"
+      })
+  public void testEmptyRequestBody(String path) {
+    restCatalog.createNamespace(Namespace.of("ns1"));
+    restCatalog.buildTable(TableIdentifier.of(Namespace.of("ns1"), "tbl1"), SCHEMA).create();
+
+    try (Response response =
+        catalogApi
+            .request("v1/{cat}/" + path, Map.of("cat", currentCatalogName))
+            .post(Entity.json(""))) {
+      assertThat(response)
+          .returns(Response.Status.BAD_REQUEST.getStatusCode(), Response::getStatus)
+          .extracting(r -> r.readEntity(ErrorResponse.class))
+          .returns(Response.Status.BAD_REQUEST.getStatusCode(), ErrorResponse::code);
+    }
+  }
+
   // Test copied from iceberg/core/src/test/java/org/apache/iceberg/rest/TestRESTCatalog.java
   // TODO: If TestRESTCatalog can be refactored to be more usable as a shared base test class,
   // just inherit these test cases from that instead of copying them here.

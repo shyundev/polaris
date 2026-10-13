@@ -411,6 +411,18 @@ public class PolarisManagementServiceIntegrationTest {
   }
 
   @Test
+  public void testCreateCatalogWithEmptyBody() {
+    try (Response response = managementApi.request("v1/catalogs").post(Entity.json(""))) {
+      assertThat(response)
+          .returns(Response.Status.BAD_REQUEST.getStatusCode(), Response::getStatus);
+      ErrorResponse error = response.readEntity(ErrorResponse.class);
+      assertThat(error)
+          .isNotNull()
+          .returns("Invalid value: createCatalog.arg0: must not be null", ErrorResponse::message);
+    }
+  }
+
+  @Test
   public void testUpdateCatalogWithoutDefaultBaseLocationInUpdate() {
     AwsStorageConfigInfo awsConfigModel =
         AwsStorageConfigInfo.builder()
