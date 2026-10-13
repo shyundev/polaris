@@ -473,7 +473,7 @@ public abstract class PolarisRestCatalogIntegrationBase extends CatalogTests<RES
   }
 
   @Override
-  protected boolean overridesRequestedLocation() {
+  protected boolean supportsVariant() {
     return true;
   }
 

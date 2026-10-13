@@ -419,7 +419,7 @@ public abstract class AbstractLocalIcebergCatalogTest extends CatalogTests<Local
   }
 
   @Override
-  protected boolean overridesRequestedLocation() {
+  protected boolean supportsVariant() {
     return true;
   }
 

@@ -200,11 +200,6 @@ public abstract class PolarisRestCatalogViewIntegrationBase extends ViewCatalogT
     return true;
   }
 
-  @Override
-  protected boolean overridesRequestedLocation() {
-    return true;
-  }
-
   /**
    * Roots view locations at the catalog's default base location instead of the {@code @TempDir}
    * used by {@link ViewCatalogTests}.
