@@ -214,6 +214,8 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
   be accepted under the obsolete array contract.
 - Python client deserialization and CLI `setup export` now preserve the remote catalog name and
   warehouse for Iceberg REST, Hadoop, and Hive external catalogs.
+- Python CLI `profiles delete` now fails with "Profile ... does not exist." for a profile that is
+  not configured, as `profiles update` does. Previously, it reported the profile as deleted.
 - Honored pagination for generic table API.
 - JDBC optimized location-overlap queries no longer include the lone `/` prefix term produced by
   scheme stripping (e.g. `s3://bucket/path` → `//bucket/path`). `//` and `///` are retained so

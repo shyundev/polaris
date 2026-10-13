@@ -108,6 +108,8 @@ class ProfilesCommand(Command):
         if name in profiles:
             del profiles[name]
             save_profiles(profiles)
+        else:
+            raise CliError(f"Profile {name} does not exist.")
 
     def _update_profile(self, name: str) -> None:
         profiles = load_profiles()

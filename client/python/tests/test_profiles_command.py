@@ -136,6 +136,20 @@ class TestProfilesCommand(CLITestBase):
     @patch("apache_polaris.cli.command.profiles.save_profiles")
     @patch(
         "apache_polaris.cli.command.profiles.load_profiles",
+        return_value={},
+    )
+    def test_profile_delete_missing_fails(
+        self, mock_load_profiles: MagicMock, mock_save_profiles: MagicMock
+    ) -> None:
+        mock_client = self.build_mock_client()
+
+        with self.assertRaises(CliError):
+            self.mock_execute(mock_client, ["profiles", "delete", "missing"])
+        mock_save_profiles.assert_not_called()
+
+    @patch("apache_polaris.cli.command.profiles.save_profiles")
+    @patch(
+        "apache_polaris.cli.command.profiles.load_profiles",
         return_value={
             "dev": {
                 "client_id": "root",
