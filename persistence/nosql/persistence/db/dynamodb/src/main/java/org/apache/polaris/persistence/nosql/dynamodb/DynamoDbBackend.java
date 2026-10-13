@@ -95,8 +95,11 @@ import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 public class DynamoDbBackend implements Backend {
   private static final Logger LOGGER = LoggerFactory.getLogger(DynamoDbBackend.class);
 
-  /** Cap on resending {@code UnprocessedItems} from {@code BatchWriteItem}. */
-  static final int MAX_BATCH_WRITE_ATTEMPTS = 10;
+  /**
+   * Cap on resending {@code UnprocessedItems} from {@code BatchWriteItem} and {@code
+   * UnprocessedKeys} from {@code BatchGetItem}.
+   */
+  static final int MAX_BATCH_ATTEMPTS = 10;
 
   final DynamoDbClient client;
   private final boolean closeClient;
@@ -343,24 +346,46 @@ public class DynamoDbBackend implements Backend {
     return result;
   }
 
+  /**
+   * DynamoDB {@code BatchGetItem} can return successfully with {@code UnprocessedKeys} when
+   * throttled or when the response exceeds its size limit. Those keys must be requested again,
+   * otherwise existing objects would be reported as missing.
+   */
   private void doFetchObjs(
       ArrayList<Map<String, AttributeValue>> keys, HashMap<PersistId, FetchedObj> result) {
-    var response =
-        client.batchGetItem(
-            BatchGetItemRequest.builder()
-                .requestItems(Map.of(tableObjs, KeysAndAttributes.builder().keys(keys).build()))
-                .build());
-    for (var objMap : response.responses().getOrDefault(tableObjs, List.of())) {
-      var key = objMap.get(KEY_NAME).b();
-      try (var in = new DataInputStream(key.asInputStream())) {
-        in.readUTF(); // realm
-        var id = in.readLong();
-        var part = in.readInt();
-        var persistId = PersistId.persistId(id, part);
-        result.put(persistId, fetchedObj(objMap));
-      } catch (IOException e) {
-        throw new RuntimeException(e);
+    Map<String, KeysAndAttributes> remaining =
+        Map.of(tableObjs, KeysAndAttributes.builder().keys(keys).build());
+    for (var attempt = 1; ; attempt++) {
+      var response =
+          client.batchGetItem(BatchGetItemRequest.builder().requestItems(remaining).build());
+      for (var objMap : response.responses().getOrDefault(tableObjs, List.of())) {
+        var key = objMap.get(KEY_NAME).b();
+        try (var in = new DataInputStream(key.asInputStream())) {
+          in.readUTF(); // realm
+          var id = in.readLong();
+          var part = in.readInt();
+          var persistId = PersistId.persistId(id, part);
+          result.put(persistId, fetchedObj(objMap));
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
+      remaining = response.unprocessedKeys();
+      if (remaining == null || remaining.isEmpty()) {
+        return;
+      }
+      if (attempt == MAX_BATCH_ATTEMPTS) {
+        throw new UnknownOperationResultException(
+            "DynamoDB batchGetItem still had unprocessed keys after "
+                + MAX_BATCH_ATTEMPTS
+                + " attempts",
+            null);
+      }
+      LOGGER.warn(
+          "DynamoDB batchGetItem left unprocessed keys on attempt {}/{}; retrying",
+          attempt,
+          MAX_BATCH_ATTEMPTS);
+      sleepBeforeBatchRetry(attempt - 1);
     }
   }
 
@@ -400,7 +425,7 @@ public class DynamoDbBackend implements Backend {
    */
   void batchWriteItemWithRetry(Map<String, List<WriteRequest>> requestItems) {
     var remaining = requestItems;
-    for (var attempt = 1; attempt <= MAX_BATCH_WRITE_ATTEMPTS; attempt++) {
+    for (var attempt = 1; attempt <= MAX_BATCH_ATTEMPTS; attempt++) {
       if (remaining == null || remaining.isEmpty()) {
         return;
       }
@@ -413,28 +438,28 @@ public class DynamoDbBackend implements Backend {
       LOGGER.warn(
           "DynamoDB batchWriteItem left unprocessed items on attempt {}/{}; retrying",
           attempt,
-          MAX_BATCH_WRITE_ATTEMPTS);
-      if (attempt == MAX_BATCH_WRITE_ATTEMPTS) {
+          MAX_BATCH_ATTEMPTS);
+      if (attempt == MAX_BATCH_ATTEMPTS) {
         break;
       }
-      sleepBeforeBatchWriteRetry(attempt - 1);
+      sleepBeforeBatchRetry(attempt - 1);
     }
     throw new UnknownOperationResultException(
         "DynamoDB batchWriteItem still had unprocessed items after "
-            + MAX_BATCH_WRITE_ATTEMPTS
+            + MAX_BATCH_ATTEMPTS
             + " attempts",
         null);
   }
 
   /** Package-visible so unit tests can stub the backoff. */
-  void sleepBeforeBatchWriteRetry(int attempt) {
+  void sleepBeforeBatchRetry(int attempt) {
     var delayMs = Math.min(1_000L, 25L << Math.min(attempt, 5));
     try {
       Thread.sleep(delayMs);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new UnknownOperationResultException(
-          "Interrupted while retrying DynamoDB batchWriteItem", e);
+          "Interrupted while retrying a DynamoDB batch request", e);
     }
   }
 

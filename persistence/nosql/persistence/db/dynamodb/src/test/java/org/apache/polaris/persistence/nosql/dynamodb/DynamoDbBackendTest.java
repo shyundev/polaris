@@ -19,6 +19,11 @@
 package org.apache.polaris.persistence.nosql.dynamodb;
 
 import static java.util.Collections.singletonMap;
+import static org.apache.polaris.persistence.nosql.api.backend.PersistId.persistId;
+import static org.apache.polaris.persistence.nosql.impl.Identifiers.COL_OBJ_CREATED_AT;
+import static org.apache.polaris.persistence.nosql.impl.Identifiers.COL_OBJ_REAL_PART_NUM;
+import static org.apache.polaris.persistence.nosql.impl.Identifiers.COL_OBJ_TYPE;
+import static org.apache.polaris.persistence.nosql.impl.Identifiers.COL_OBJ_VALUE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -32,16 +37,23 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import org.apache.polaris.persistence.nosql.api.backend.PersistId;
 import org.apache.polaris.persistence.nosql.api.exceptions.UnknownOperationResultException;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.BatchGetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.BatchWriteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.BatchWriteItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
 import software.amazon.awssdk.services.dynamodb.model.PutRequest;
 import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 
@@ -71,7 +83,7 @@ class DynamoDbBackendTest {
     var client = mock(DynamoDbClient.class);
     var backend =
         spy(new DynamoDbBackend(new DynamoDbBackendConfig(false, client, Optional.empty())));
-    doNothing().when(backend).sleepBeforeBatchWriteRetry(anyInt());
+    doNothing().when(backend).sleepBeforeBatchRetry(anyInt());
 
     var requestItems = singletonMap("objs", List.of(sampleWriteRequest("k1")));
     var unprocessed = singletonMap("objs", List.of(sampleWriteRequest("k1")));
@@ -83,7 +95,7 @@ class DynamoDbBackendTest {
     backend.batchWriteItemWithRetry(requestItems);
 
     verify(client, times(2)).batchWriteItem(any(BatchWriteItemRequest.class));
-    verify(backend).sleepBeforeBatchWriteRetry(0);
+    verify(backend).sleepBeforeBatchRetry(0);
   }
 
   @Test
@@ -91,7 +103,7 @@ class DynamoDbBackendTest {
     var client = mock(DynamoDbClient.class);
     var backend =
         spy(new DynamoDbBackend(new DynamoDbBackendConfig(false, client, Optional.empty())));
-    doNothing().when(backend).sleepBeforeBatchWriteRetry(anyInt());
+    doNothing().when(backend).sleepBeforeBatchRetry(anyInt());
 
     var requestItems = singletonMap("objs", List.of(sampleWriteRequest("k1")));
     var unprocessed = singletonMap("objs", List.of(sampleWriteRequest("k1")));
@@ -102,10 +114,69 @@ class DynamoDbBackendTest {
         .isInstanceOf(UnknownOperationResultException.class)
         .hasMessageContaining("unprocessed items");
 
-    verify(client, times(DynamoDbBackend.MAX_BATCH_WRITE_ATTEMPTS))
+    verify(client, times(DynamoDbBackend.MAX_BATCH_ATTEMPTS))
         .batchWriteItem(any(BatchWriteItemRequest.class));
-    verify(backend, times(DynamoDbBackend.MAX_BATCH_WRITE_ATTEMPTS - 1))
-        .sleepBeforeBatchWriteRetry(anyInt());
+    verify(backend, times(DynamoDbBackend.MAX_BATCH_ATTEMPTS - 1)).sleepBeforeBatchRetry(anyInt());
+  }
+
+  @Test
+  void fetchResendsUnprocessedKeys() {
+    var client = mock(DynamoDbClient.class);
+    var backend =
+        spy(new DynamoDbBackend(new DynamoDbBackendConfig(false, client, Optional.empty())));
+    doNothing().when(backend).sleepBeforeBatchRetry(anyInt());
+
+    var id = persistId(42L, 0);
+    var unprocessed =
+        singletonMap(
+            backend.tableObjs,
+            KeysAndAttributes.builder()
+                .keys(List.of(DynamoDbBackend.objKeyMap("realm", id)))
+                .build());
+    when(client.batchGetItem(any(BatchGetItemRequest.class)))
+        .thenReturn(BatchGetItemResponse.builder().unprocessedKeys(unprocessed).build())
+        .thenReturn(
+            BatchGetItemResponse.builder()
+                .responses(singletonMap(backend.tableObjs, List.of(sampleObjItem("realm", id))))
+                .build());
+
+    assertThat(backend.fetch("realm", Set.of(id))).containsOnlyKeys(id);
+    verify(client, times(2)).batchGetItem(any(BatchGetItemRequest.class));
+    verify(backend).sleepBeforeBatchRetry(0);
+  }
+
+  @Test
+  void fetchThrowsWhenKeysStayUnprocessed() {
+    var client = mock(DynamoDbClient.class);
+    var backend =
+        spy(new DynamoDbBackend(new DynamoDbBackendConfig(false, client, Optional.empty())));
+    doNothing().when(backend).sleepBeforeBatchRetry(anyInt());
+
+    var id = persistId(42L, 0);
+    var unprocessed =
+        singletonMap(
+            backend.tableObjs,
+            KeysAndAttributes.builder()
+                .keys(List.of(DynamoDbBackend.objKeyMap("realm", id)))
+                .build());
+    when(client.batchGetItem(any(BatchGetItemRequest.class)))
+        .thenReturn(BatchGetItemResponse.builder().unprocessedKeys(unprocessed).build());
+
+    assertThatThrownBy(() -> backend.fetch("realm", Set.of(id)))
+        .isInstanceOf(UnknownOperationResultException.class)
+        .hasMessageContaining("unprocessed keys");
+
+    verify(client, times(DynamoDbBackend.MAX_BATCH_ATTEMPTS))
+        .batchGetItem(any(BatchGetItemRequest.class));
+  }
+
+  private static Map<String, AttributeValue> sampleObjItem(String realm, PersistId id) {
+    var item = new HashMap<>(DynamoDbBackend.objKeyMap(realm, id));
+    item.put(COL_OBJ_TYPE, AttributeValue.fromS("test"));
+    item.put(COL_OBJ_REAL_PART_NUM, AttributeValue.fromN("1"));
+    item.put(COL_OBJ_CREATED_AT, AttributeValue.fromN("0"));
+    item.put(COL_OBJ_VALUE, AttributeValue.fromB(SdkBytes.fromByteArray(new byte[] {1})));
+    return item;
   }
 
   private static WriteRequest sampleWriteRequest(String key) {
