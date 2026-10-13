@@ -116,8 +116,8 @@ data:
     {{- end -}}
 
     {{- /* HTTP ports */ -}}
-    {{- $_ = set $map "quarkus.http.port" (get (first .Values.service.ports) "port") -}}
-    {{- $_ = set $map "quarkus.management.port" (get (first .Values.managementService.ports) "port") -}}
+    {{- $_ = set $map "quarkus.http.port" (coalesce (first .Values.service.ports).targetPort (first .Values.service.ports).port) -}}
+    {{- $_ = set $map "quarkus.management.port" (coalesce (first .Values.managementService.ports).targetPort (first .Values.managementService.ports).port) -}}
 
     {{- /* CORS */ -}}
     {{- if .Values.cors.enabled -}}

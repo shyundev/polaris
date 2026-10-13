@@ -254,6 +254,14 @@ tests:
       - matchRegex: { path: 'data["application.properties"]', pattern: "quarkus.http.port=8080" }
       - matchRegex: { path: 'data["application.properties"]', pattern: "quarkus.management.port=8081" }
 
+  - it: should derive HTTP ports from service target ports
+    set:
+      service: { ports: [ { name: polaris-http, port: 80, targetPort: 8080 } ] }
+      managementService: { ports: [ { name: polaris-mgmt, port: 9000, targetPort: 8081 } ] }
+    asserts:
+      - matchRegex: { path: 'data["application.properties"]', pattern: "quarkus.http.port=8080" }
+      - matchRegex: { path: 'data["application.properties"]', pattern: "quarkus.management.port=8081" }
+
   - it: should configure console logging
     set:
       logging: { level: DEBUG, console: { enabled: true, threshold: INFO, format: custom } }

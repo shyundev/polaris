@@ -229,6 +229,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 - The MongoDB readiness check is now shown in `/q/health` only when the NoSQL MongoDB backend is
   selected. Other persistence backends no longer show the unused check. MongoDB deployments keep
   readiness monitoring without configuration changes.
+- Helm chart: Polaris now listens on `targetPort` of the first `service` and `managementService`
+  ports when it is set. Previously it listened on `port`, so the Service and the health probes,
+  which target the container port, could not reach it.
 
 ### Commits
 
