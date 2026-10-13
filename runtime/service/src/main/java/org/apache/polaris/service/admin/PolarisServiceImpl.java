@@ -207,6 +207,10 @@ public class PolarisServiceImpl
   }
 
   private void validateAuthenticationParameters(AuthenticationParameters authenticationParameters) {
+    if (authenticationParameters == null) {
+      throw new IllegalArgumentException(
+          "Missing authenticationParameters in connectionConfigInfo");
+    }
 
     String authenticationType = authenticationParameters.getAuthenticationType().name();
     List<String> supportedAuthenticationTypes =

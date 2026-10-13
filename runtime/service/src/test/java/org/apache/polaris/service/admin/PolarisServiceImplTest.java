@@ -277,6 +277,32 @@ public class PolarisServiceImplTest {
         .hasMessage("Unsupported authentication type: BEARER");
   }
 
+  @Test
+  void testValidateExternalCatalog_MissingAuthenticationParameters() {
+    StorageConfigInfo storageConfig =
+        FileStorageConfigInfo.builder(StorageConfigInfo.StorageTypeEnum.FILE)
+            .setAllowedLocations(List.of("file://tmp"))
+            .build();
+
+    ConnectionConfigInfo connectionConfigInfo = Mockito.mock(ConnectionConfigInfo.class);
+    when(connectionConfigInfo.getConnectionType())
+        .thenReturn(ConnectionConfigInfo.ConnectionTypeEnum.ICEBERG_REST);
+    when(connectionConfigInfo.getAuthenticationParameters()).thenReturn(null);
+
+    ExternalCatalog externalCatalog =
+        ExternalCatalog.builder()
+            .setType(Catalog.TypeEnum.EXTERNAL)
+            .setName("test-catalog")
+            .setProperties(new CatalogProperties("file://tmp"))
+            .setStorageConfigInfo(storageConfig)
+            .setConnectionConfigInfo(connectionConfigInfo)
+            .build();
+
+    assertThatThrownBy(() -> invokeValidateExternalCatalog(polarisService, externalCatalog))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Missing authenticationParameters in connectionConfigInfo");
+  }
+
   private void invokeValidateExternalCatalog(PolarisServiceImpl service, Catalog catalog)
       throws Exception {
     Method method =
