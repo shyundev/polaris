@@ -110,6 +110,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
 
 ### Fixes
 
+- Tables named after an Iceberg metadata table type, such as `history`, `snapshots` or `files`,
+  can now be created. Previously the create request failed with a 500 `IllegalStateException`
+  (`invalid_path_key_for_passthrough_resolved_path`).
 - NoSQL commits resend unresolved object writes on retry, preventing successful commits from
   referencing objects left unwritten by a previous attempt.
 - The H2 relational JDBC init script no longer overwrites the recorded schema version. It now seeds

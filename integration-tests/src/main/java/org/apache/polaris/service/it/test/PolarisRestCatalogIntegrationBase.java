@@ -662,6 +662,20 @@ public abstract class PolarisRestCatalogIntegrationBase extends CatalogTests<RES
   }
 
   @Test
+  public void testCreateTableNamedAfterMetadataTable() {
+    Namespace ns = Namespace.of("ns1");
+    restCatalog.createNamespace(ns);
+    TableIdentifier history = TableIdentifier.of(ns, "history");
+    TableIdentifier snapshots = TableIdentifier.of(ns, "snapshots");
+
+    restCatalog.buildTable(history, SCHEMA).create();
+    restCatalog.buildTable(snapshots, SCHEMA).createTransaction().commitTransaction();
+
+    assertThat(restCatalog.loadTable(history)).isInstanceOf(BaseTable.class);
+    assertThat(restCatalog.loadTable(snapshots)).isInstanceOf(BaseTable.class);
+  }
+
+  @Test
   public void testCreateTableWithOverriddenBaseLocation() {
     Catalog catalog = managementApi.getCatalog(currentCatalogName);
     Map<String, String> catalogProps = new HashMap<>(catalog.getProperties().toMap());

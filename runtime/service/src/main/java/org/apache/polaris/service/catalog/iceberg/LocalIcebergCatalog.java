@@ -494,6 +494,15 @@ public class LocalIcebergCatalog extends BaseMetastoreViewCatalog
     return new BaseTable(ops, fullTableName(name(), identifier), metricsReporter());
   }
 
+  /**
+   * Checks for a table entity with exactly this identifier, so a table can be named after a
+   * metadata table type such as {@code history}.
+   */
+  @Override
+  public boolean tableExists(TableIdentifier identifier) {
+    return newTableOps(identifier).current() != null;
+  }
+
   @Override
   public TableBuilder buildTable(TableIdentifier identifier, Schema schema) {
     return new PolarisIcebergCatalogTableBuilder(identifier, schema);
