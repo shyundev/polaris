@@ -214,6 +214,9 @@ request adding CHANGELOG notes for breaking (!) changes and possibly other secti
   be accepted under the obsolete array contract.
 - Python client deserialization and CLI `setup export` now preserve the remote catalog name and
   warehouse for Iceberg REST, Hadoop, and Hive external catalogs.
+- Python CLI `privileges table` and `privileges view` now report a missing `--table` or `--view`
+  as a missing required argument. Previously, omitting it produced an opaque pydantic
+  `ValidationError`.
 - Honored pagination for generic table API.
 - JDBC optimized location-overlap queries no longer include the lone `/` prefix term produced by
   scheme stripping (e.g. `s3://bucket/path` → `//bucket/path`). `//` and `///` are retained so

@@ -65,6 +65,31 @@ class TestPrivilegesCommand(CLITestBase):
                             "r",
                         ],
                     )
+        # Missing --table / --view
+        for sub, privilege, flag in [
+            ("table", "TABLE_READ_DATA", "--table"),
+            ("view", "VIEW_FULL_METADATA", "--view"),
+        ]:
+            for action in ["grant", "revoke"]:
+                with self.subTest(subcommand=sub, action=action, error="missing name"):
+                    self.check_exception(
+                        lambda: self.mock_execute(
+                            mock_client,
+                            [
+                                "privileges",
+                                sub,
+                                action,
+                                "--catalog",
+                                "c",
+                                "--catalog-role",
+                                "r",
+                                "--namespace",
+                                "ns",
+                                privilege,
+                            ],
+                        ),
+                        f"Missing required argument: {flag}",
+                    )
         # Invalid privilege
         self.check_exception(
             lambda: self.mock_execute(

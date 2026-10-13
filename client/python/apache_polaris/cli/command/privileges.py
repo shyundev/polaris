@@ -89,6 +89,14 @@ class PrivilegesCommand(Command):
             raise CliError(
                 f"Missing required argument: {Argument.to_flag_name(Arguments.NAMESPACE)}"
             )
+        if self.privileges_subcommand == Subcommands.TABLE and not self.table:
+            raise CliError(
+                f"Missing required argument: {Argument.to_flag_name(Arguments.TABLE)}"
+            )
+        if self.privileges_subcommand == Subcommands.VIEW and not self.view:
+            raise CliError(
+                f"Missing required argument: {Argument.to_flag_name(Arguments.VIEW)}"
+            )
 
         if self.action == Actions.GRANT and self.cascade:
             raise CliError("Unrecognized argument for GRANT: --cascade")
