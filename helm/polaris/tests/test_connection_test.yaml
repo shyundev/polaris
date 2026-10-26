@@ -38,3 +38,38 @@ tests:
       - equal:
           path: metadata.annotations["helm.sh/hook"]
           value: test
+
+  # spec.securityContext and spec.containers[0].securityContext
+  - it: should set securityContext by default
+    asserts:
+      - isSubset:
+          path: spec.securityContext
+          content:
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+      - isSubset:
+          path: spec.containers[0].securityContext
+          content:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 10000
+            capabilities:
+              drop: [ "ALL" ]
+            seccompProfile:
+              type: RuntimeDefault
+  - it: should set custom securityContext
+    set:
+      podSecurityContext:
+        fsGroup: 1234
+      containerSecurityContext:
+        runAsUser: 1234
+    asserts:
+      - isSubset:
+          path: spec.securityContext
+          content:
+            fsGroup: 1234
+      - isSubset:
+          path: spec.containers[0].securityContext
+          content:
+            runAsUser: 1234

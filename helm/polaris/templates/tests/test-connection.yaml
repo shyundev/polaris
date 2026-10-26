@@ -31,8 +31,16 @@ metadata:
   annotations:
     "helm.sh/hook": test
 spec:
+  {{- if .Values.podSecurityContext }}
+  securityContext:
+    {{- tpl (toYaml .Values.podSecurityContext) . | nindent 4 }}
+  {{- end }}
   containers:
     - name: check-connection
+      {{- if .Values.containerSecurityContext }}
+      securityContext:
+        {{- tpl (toYaml .Values.containerSecurityContext) . | nindent 8 }}
+      {{- end }}
       image: busybox
       command: ['sh', '-c']
       args:
